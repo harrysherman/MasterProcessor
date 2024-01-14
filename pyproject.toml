@@ -1,0 +1,6 @@
+[tool.black]
+line-length = 109
+
+
+[tool.flake8]
+extend-ignore = ['E203','E266','E501','W503']
