@@ -1,6 +1,30 @@
 import openpyxl
 import pandas as pd
 import D1g1tObject
+import tkinter as tk
+from tkinter import filedialog
+
+
+def get_master_filepath():
+    print("Select the master filepath")
+    root = tk.Tk()
+    root.withdraw()  # Hide the main tkinter window
+    master_filepath = filedialog.askopenfilename(
+        title="SELECT THE MASTER FILE", filetypes=[("Excel Files", "*.xlsx")]
+    )
+    print("Selected Master:", master_filepath)
+    return master_filepath
+
+
+def get_latest_export_filepath():
+    print("SELECT THE LATEST EXPORT FROM D1G1T")
+    root = tk.Tk()
+    root.withdraw()  # Hide the main tkinter window
+    latest_export_filepath = filedialog.askopenfilename(
+        title="Select the Latest Export", filetypes=[("Excel Files", "*.xlsx")]
+    )
+    print("Selected Latest Export:", latest_export_filepath)
+    return latest_export_filepath
 
 
 # Ready to test
@@ -17,7 +41,7 @@ def load_files(latest_export_path, master_path):
     """
     latest_export = openpyxl.load_workbook(latest_export_path)
     master = openpyxl.load_workbook(master_path)
-    return latest_export, master
+    return master, latest_export
 
 
 # Ready to test
@@ -107,17 +131,8 @@ def add_sheet_to_master():
     pass
 
 
-# TODO: Write function
-def main():
-    """
-    Main function to execute the program.
-
-    Asks the user for file paths, loads the files, and creates a change file.
-
-    Returns:
-        None
-    """
-    file1_path = input("Enter path to original master:\n")
-    file2_path = input("Enter path to latest d1g1t export:\n")
-
-    df1, df2 = load_files(file1_path, file2_path)
+if __name__ == "__main__":
+    master_filepath = get_master_filepath()
+    latest_export_filepath = get_latest_export_filepath()
+    master, latest_export = load_files(master_filepath, latest_export_filepath)
+    print("Completed")
