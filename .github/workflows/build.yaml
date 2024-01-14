@@ -18,4 +18,4 @@ jobs:
         with:
           files: |
             Release.txt
-            /mac/app.py
+            mac/Master\ Processor.app
