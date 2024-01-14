@@ -3,9 +3,18 @@ import pandas as pd
 import D1g1tObject
 import tkinter as tk
 from tkinter import filedialog
+from datetime import date
+import yfinance as yf
 
 
+# WORKING
 def get_master_filepath():
+    """
+    Prompts the user to select the master file and returns the filepath.
+
+    Returns:
+        str: The filepath of the selected master file.
+    """
     print("Select the master filepath")
     root = tk.Tk()
     root.withdraw()  # Hide the main tkinter window
@@ -16,7 +25,14 @@ def get_master_filepath():
     return master_filepath
 
 
+# WORKING
 def get_latest_export_filepath():
+    """
+    Prompts the user to select the latest export file from D1G1T.
+
+    Returns:
+        str: The filepath of the selected latest export file.
+    """
     print("SELECT THE LATEST EXPORT FROM D1G1T")
     root = tk.Tk()
     root.withdraw()  # Hide the main tkinter window
@@ -27,7 +43,7 @@ def get_latest_export_filepath():
     return latest_export_filepath
 
 
-# Ready to test
+# WORKING
 def load_files(latest_export_path, master_path):
     """
     Load the two Excel files and return them in a tuple
@@ -96,43 +112,101 @@ def generate_d1g1t_objects(workbook):
     return d1g1t_objects
 
 
-# TODO: Write function
-def compare_workbooks(latest_export_objects, master_objects):
+# Ready to test
+def generate_object_dicts_for_comparison(master, latest_d1g1t_export):
     """
-    Compare two workbooks and return a list of changes.
+    Generate dictionaries of D1g1t objects from the master and latest export.
 
     Args:
-        latest_export_objects (dict): A dictionary of D1g1t objects from the latest export.
-        master_objects (dict): A dictionary of D1g1t objects from the master.
+        master (openpyxl.workbook): The master workbook.
+        latest_d1g1t_export (openpyxl.workbook): The latest export from D1g1t.
 
     Returns:
-        list: A list of changes.
+        tuple: A tuple containing dictionaries of D1g1t objects.
     """
-    changes = []
-    for ident in latest_export_objects:
-        latest_export_obj = latest_export_objects[ident]
-        master_obj = master_objects[ident]
-        if latest_export_obj != master_obj:
-            changes.append((latest_export_obj, master_obj))
-    return changes
+    master_objects = generate_d1g1t_objects(master)
+    latest_d1g1t_export_objects = generate_d1g1t_objects(latest_d1g1t_export)
+    return master_objects, latest_d1g1t_export_objects
 
 
-# TODO: Write function
-def add_sheet_to_master():
+# Ready to test
+def group_objects(latest_d1g1t_export_objects, latest_master_objects):
+    # Objects that are new since the last export. To be highlighted in LIGHT GREEN
+    new_objects = set(latest_d1g1t_export_objects.keys()).difference(set(latest_master_objects.keys()))
+
+    # Objects that have been deleted since the last export. To be listed in RunSummary
+    deleted_objects = set(latest_master_objects.keys()).difference(set(latest_d1g1t_export_objects.keys()))
+
+    # Objects that are in both the latest export and the master
+    surviving_objects = set(latest_d1g1t_export_objects.keys()) - new_objects
+
+    return new_objects, deleted_objects, surviving_objects
+
+
+# Ready to test
+def generate_headers(latest_d1g1t_export_filepath):
     """
-    Add a sheet to the master.
+    Generate headers from the latest d1g1t export file.
 
     Args:
-        None
+        latest_d1g1t_export_filepath (str): The file path of the latest d1g1t export file.
+
+    Returns:
+        list: A list of headers extracted from the export file.
+    """
+    headers = []
+    latest_d1g1t_export_workbook = openpyxl.load_workbook(latest_d1g1t_export_filepath)
+    latest_d1g1t_export_sheet = latest_d1g1t_export_workbook.active
+    for i in range(0, latest_d1g1t_export_sheet.max_column):
+        headers.append(latest_d1g1t_export_sheet[chr(65 + i) + "1"].value)
+    return headers
+
+
+# Ready to test
+def prepare_new_master(headers, latest_master_workbook):
+    """
+    Creates a new sheet in the master workbook and adds headers to it.
+
+    Args:
+        headers (list): List of headers to be added to the new sheet.
+        latest_master_workbook (str): Path of the latest master workbook.
 
     Returns:
         None
     """
+    # Create a new sheet in the master workbook
+    master = openpyxl.load_workbook(latest_master_workbook)
+    master_sheet = master.create_sheet(date.today().strftime("%b %d"), 0)
+
+    # Add headers to the new sheet (consistent headers with latest export)
+    for i in range(0, len(headers)):
+        master_sheet[chr(65 + i) + "1"] = headers[i]
+
+    # Save the new master workbook
+    master.save(latest_master_workbook)
+
+
+# TODO: WRITE FUNCTION
+def compare_object_dictionaries(master, surviving_objects, latest_master_objects):
+    master = openpyxl.load_workbook(master)
+    master_sheet = master.active  # Confirm this is the new sheet
+
+    # Loop through the surviving objects
+    surviving_objects = list(surviving_objects)
+    i = 2
+    for obj in surviving_objects:
+        for j in range(0, master_sheet.max_column):
+            # TODO: Add logic to compare objects
+            pass
+        pass
     pass
 
 
 if __name__ == "__main__":
-    master_filepath = get_master_filepath()
-    latest_export_filepath = get_latest_export_filepath()
-    master, latest_export = load_files(master_filepath, latest_export_filepath)
+    master_filepath = get_master_filepath()  # WORKING
+    latest_d1g1t_export_filepath = get_latest_export_filepath()  # WORKING
+    master, latest_d1g1t_export = load_files(master_filepath, latest_d1g1t_export_filepath)  # WORKING
+    master_objects, latest_d1g1t_export_objects = generate_object_dicts_for_comparison(
+        master, latest_d1g1t_export
+    )  # WORKING
     print("Completed")
