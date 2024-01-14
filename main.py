@@ -37,7 +37,7 @@ def get_latest_export_filepath():
     root = tk.Tk()
     root.withdraw()  # Hide the main tkinter window
     latest_export_filepath = filedialog.askopenfilename(
-        title="Select the Latest Export", filetypes=[("Excel Files", "*.xlsx")]
+        title="SELECT LATEST EXPORT", filetypes=[("Excel Files", "*.xlsx")]
     )
     print("Selected Latest Export:", latest_export_filepath)
     return latest_export_filepath
@@ -206,7 +206,8 @@ if __name__ == "__main__":
     master_filepath = get_master_filepath()  # WORKING
     latest_d1g1t_export_filepath = get_latest_export_filepath()  # WORKING
     master, latest_d1g1t_export = load_files(master_filepath, latest_d1g1t_export_filepath)  # WORKING
-    master_objects, latest_d1g1t_export_objects = generate_object_dicts_for_comparison(
-        master, latest_d1g1t_export
-    )  # WORKING
     print("Completed")
+    # master_objects, latest_d1g1t_export_objects = generate_object_dicts_for_comparison(
+    #     master, latest_d1g1t_export
+    # )  # WORKING
+    # print("Completed")

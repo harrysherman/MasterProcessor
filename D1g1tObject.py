@@ -1,5 +1,4 @@
 class D1g1tObject:
-
     def __init__(self, id, fields_dict):
         """
         Initializes a D1g1tObject instance.
@@ -13,5 +12,3 @@ class D1g1tObject:
         """
         self.id = id
         self.fields_dict = fields_dict
-
-    #def compare_to(D1g1tObject)
