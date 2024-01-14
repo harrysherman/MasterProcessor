@@ -1,0 +1,6 @@
+flake8
+pyproject-flake8
+yfinance
+openpyxl
+pandas
+tkinter
