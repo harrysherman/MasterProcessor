@@ -3,4 +3,5 @@ pyproject-flake8
 yfinance
 openpyxl
 pandas
-tkinter
+tk
+pyinstaller

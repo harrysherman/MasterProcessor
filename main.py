@@ -1,10 +1,17 @@
 import openpyxl
 import pandas as pd
-import D1g1tObject
+from D1g1tObject import D1g1tObject
 import tkinter as tk
 from tkinter import filedialog
 from datetime import date
-import yfinance as yf
+import yfinance
+
+# LOAD EXCEPTIONS
+exceptions_df = pd.read_excel(
+    r"C:\Users\HarrySherman\OneDrive - August Group\Shared Documents\d1g1t\Securities Master\Macro exceptions.xlsx"
+)
+exceptions_df = exceptions_df.fillna("")
+exceptions = exceptions_df.set_index("Find").T.to_dict("list")
 
 
 # WORKING
@@ -73,6 +80,7 @@ def load_exceptions(exception_path):
     """
     exceptions = pd.read_excel("../Macro exceptions.xlsx")  # .dropna()
     exceptions = exceptions.fillna("")
+    exceptions = exceptions_df.set_index("Find").T.to_dict("list")
 
     return exceptions
 
@@ -88,6 +96,7 @@ def generate_d1g1t_objects(workbook):
     Returns:
         dict: A dictionary of D1g1t objects.
     """
+    # workbook = openpyxl.load_workbook(workbook)
     sheet = workbook.active  # sheet = active sheet in workbook
     d1g1t_objects = {}  # d1g1t_objects = dictionary of D1g1t Objects
 
@@ -98,7 +107,7 @@ def generate_d1g1t_objects(workbook):
         for j in range(0, sheet.max_column):
             k = sheet[chr(j + 65) + str(1)].value  # k = column header
             v = sheet[chr(j + 65) + str(i)].value  # v = attribute value
-            if v == None or v == "Undefined":
+            if v is None or v == "Undefined":
                 v = ""
             attributes[k] = v
 
@@ -174,6 +183,7 @@ def mark_as_updated(cell):
     """
     cell.fill = openpyxl.styles.PatternFill(patternType="solid", fgColor="FF3333")
 
+
 def mark_as_new(cell):
     """
     Mark a cell as new by changing the background color to LIGHT GREEN.
@@ -185,6 +195,7 @@ def mark_as_new(cell):
         None
     """
     cell.fill = openpyxl.styles.PatternFill(patternType="solid", fgColor="7FFFD4")
+
 
 def mark_as_generated(cell):
     """
@@ -200,19 +211,19 @@ def mark_as_generated(cell):
 
 
 # Ready to test
-def prepare_new_master(headers, latest_master_workbook):
+def prepare_new_master(headers, latest_master_path):
     """
     Creates a new sheet in the master workbook and adds headers to it.
 
     Args:
         headers (list): List of headers to be added to the new sheet.
-        latest_master_workbook (str): Path of the latest master workbook.
+        latest_master (str): Path of the latest master workbook.
 
     Returns:
         None
     """
     # Create a new sheet in the master workbook
-    master = openpyxl.load_workbook(latest_master_workbook)
+    master = openpyxl.load_workbook(latest_master_path)
     master_sheet = master.create_sheet(date.today().strftime("%b %d"), 0)
 
     # Add headers to the new sheet (consistent headers with latest export)
@@ -220,12 +231,45 @@ def prepare_new_master(headers, latest_master_workbook):
         master_sheet[chr(65 + i) + "1"] = headers[i]
 
     # Save the new master workbook
-    master.save(latest_master_workbook)
+    master.save(latest_master_path)
+
+
+def clean_name(orig_name):
+    if orig_name is not None:
+        name = str(orig_name).split()  # Generates a list of tokens
+
+        for i in range(len(name)):
+            name[i] = name[i].replace("*", "")
+            name[i] = name[i].title()  # Makes the first letter of every word capitalized
+            name[i] = name[i].replace("'S", "'s")
+            name[i] = name[i].replace("Wts-", "WTS ")
+            name[i] = name[i].replace(".Com", ".com")
+            if name[i] in exceptions.keys():  # Checks if token triggers an exception
+                name[i] = str(exceptions[name[i]][0])  # If yes, replaces with new exception
+
+        name = " ".join(name).strip()
+        # name = " ".join(str(name)).strip()              #Joins tokens and returns clean name
+        return name
+
+    else:
+        return ""
+
+
+def get_security_asset_subclass(ticker):
+    # Get ticker information, market cap and price-to-sales ratio
+    info = yfinance.Ticker(ticker).info
+    market_cap = info.get("marketCap", 0)
+    price_to_sales = info.get("trailingPE", 0)
+
+    size = "Large Cap" if market_cap >= 10e9 else "Mid Cap" if 2e9 <= market_cap < 10e9 else "Small Cap"
+    category = "Growth" if price_to_sales > 15 else "Blend" if price_to_sales == 15 else "Value"
+
+    return size + " " + category
 
 
 # TODO: WRITE FUNCTION
-def compare_object_dictionaries(master, headers, surviving_objects, latest_d1g1t_export_objects, latest_master_objects):
-    master = openpyxl.load_workbook(master)
+def compare_object_dictionaries(master_filepath, headers, surviving_objects, latest_d1g1t_export_objects):
+    master = openpyxl.load_workbook(master_filepath)
     master_sheet = master.active  # Confirm this is the new sheet
 
     # Loop through the surviving objects
@@ -233,17 +277,16 @@ def compare_object_dictionaries(master, headers, surviving_objects, latest_d1g1t
     i = 2
     for obj in surviving_objects:
         for j in range(0, len(headers)):
-            # TODO: Add logic to compare objects
+            cell = master_sheet[chr(65 + j) + str(i)]
             if headers[j] == "Security Name":
-                #new = clean_name(latest_d1g1t_export_objects[obj].fields_dict[headers[j]])
+                new = clean_name(latest_d1g1t_export_objects[obj].fields_dict[headers[j]])
                 # Above turns names such as "Put/Xsp                 @  378 Exp 07/21/2023" into "Put/Xsp @ 378 Exp 07/21/2023"
             else:
                 new = latest_d1g1t_export_objects[obj].fields_dict[headers[j]]
-            cell = master_sheet[chr(65 + j) + str(i)]
             if new != "Undefined":
                 cell.value = new  # add empty string below
-            master_sheet[chr(65 + j) + str(i)].fill = fill_pattern_if_new
-            # ticker = ''
+                mark_as_new(cell)
+            # master_sheet[chr(65 + j) + str(i)].fill = fill_pattern_if_new
             if headers[j] == "Ticker Short":
                 ticker = master_sheet[chr(65 + j) + str(i)].value
             if headers[j] == "Sector":
@@ -251,49 +294,101 @@ def compare_object_dictionaries(master, headers, surviving_objects, latest_d1g1t
                     try:
                         ticker_info = yfinance.Ticker(ticker).info
                         sector = ticker_info["sector"]
-                        print(sector)
                         if sector == "Basic Materials":
                             sector = "Materials"
+                        print(sector)
                         master_sheet[chr(65 + j) + str(i)].value = sector
-                        master_sheet[chr(65 + j) + str(i)].fill = fill_pattern_if_generated
+                        mark_as_generated(cell)
                     except:
                         print("Ticker unavailable")
             if headers[j] == "Security Asset Sub-class":
                 if ticker is not None:
                     try:
-                        # Get ticker information, market cap and price-to-sales ratio
-                        info = yfinance.Ticker(ticker).info
-                        market_cap = info.get("marketCap", 0)
-                        price_to_sales = info.get("trailingPE", 0)
-
-                        # Determine size (Large Cap, Mid Cap, Small Cap) and category (Growth, Value, Blend)
-                        size = (
-                            "Large Cap"
-                            if market_cap >= 10e9
-                            else "Mid Cap"
-                            if 2e9 <= market_cap < 10e9
-                            else "Small Cap"
-                        )
-                        category = (
-                            "Growth" if price_to_sales > 15 else "Blend" if price_to_sales == 15 else "Value"
-                        )
-
-                        # Return Security Asset Sub Class
-                        master_sheet[chr(65 + j) + str(i)].fill = fill_pattern_if_generated
-                        cell.value = size + " " + category
+                        sasc = get_security_asset_subclass(
+                            ticker
+                        )  # Get ticker information, market cap and price-to-sales ratio
+                        mark_as_generated(cell)
+                        cell.value = sasc
                     except:
                         cell.value = latest_d1g1t_export_objects[obj].fields_dict[headers[j]]
                         print(latest_d1g1t_export_objects[obj].fields_dict[headers[j]])
-
         i = i + 1
     i = i - 1
+    master.save(master_filepath)
+
+
+def add_new_objects_to_master(master_filepath, headers, new_objects):
+    master = openpyxl.load_workbook(master_filepath)
+    master_sheet = master.active
+    new_objects = list(new_objects)
+    ticker = ""
+    i = master_sheet.max_row + 1
+    for obj in new_objects:
+        for j in range(0, len(headers)):
+            cell = master_sheet[chr(65 + j) + str(i)]
+            if headers[j] == "Security Name":
+                new = clean_name(latest_d1g1t_export_objects[obj].fields_dict[headers[j]])
+                # Above turns names such as "Put/Xsp                 @  378 Exp 07/21/2023" into "Put/Xsp @ 378 Exp 07/21/2023"
+            else:
+                new = latest_d1g1t_export_objects[obj].fields_dict[headers[j]]
+            if new != "Undefined":
+                cell.value = new  # add empty string below
+                mark_as_new(cell)
+            # master_sheet[chr(65 + j) + str(i)].fill = fill_pattern_if_new
+            if headers[j] == "Ticker Short":
+                ticker = master_sheet[chr(65 + j) + str(i)].value
+            if headers[j] == "Sector":
+                if ticker is not None:
+                    try:
+                        ticker_info = yfinance.Ticker(ticker).info
+                        sector = ticker_info["sector"]
+                        if sector == "Basic Materials":
+                            sector = "Materials"
+                        print(sector)
+                        master_sheet[chr(65 + j) + str(i)].value = sector
+                        mark_as_generated(cell)
+                    except:
+                        print("Ticker unavailable")
+            if headers[j] == "Security Asset Sub-class":
+                if ticker is not None:
+                    try:
+                        sasc = get_security_asset_subclass(
+                            ticker
+                        )  # Get ticker information, market cap and price-to-sales ratio
+                        mark_as_generated(cell)
+                        cell.value = sasc
+                    except:
+                        cell.value = latest_d1g1t_export_objects[obj].fields_dict[headers[j]]
+                        print(latest_d1g1t_export_objects[obj].fields_dict[headers[j]])
+        i = i + 1
+    i = i - 1
+    master.save(master_filepath)
+
 
 if __name__ == "__main__":
-    master_filepath = get_master_filepath()  # WORKING
-    latest_d1g1t_export_filepath = get_latest_export_filepath()  # WORKING
+    # master_filepath = get_master_filepath()  # NOT WORKING
+    master_filepath = (
+        r"C:\Users\HarrySherman\OneDrive - August Group\Documents\GitHub\MasterProcessor\SM1.xlsx"
+    )
+    # latest_d1g1t_export_filepath = get_latest_export_filepath()  # NOT WORKING
+    latest_d1g1t_export_filepath = (
+        r"C:\Users\HarrySherman\OneDrive - August Group\Documents\GitHub\MasterProcessor\SM2.xlsx"
+    )
+
     master, latest_d1g1t_export = load_files(master_filepath, latest_d1g1t_export_filepath)  # WORKING
-    print("Completed")
-    # master_objects, latest_d1g1t_export_objects = generate_object_dicts_for_comparison(
-    #     master, latest_d1g1t_export
-    # )  # WORKING
-    # print("Completed")
+
+    headers = generate_headers(latest_d1g1t_export_filepath)
+
+    master_objects, latest_d1g1t_export_objects = generate_object_dicts_for_comparison(
+        master, latest_d1g1t_export
+    )
+
+    new_objects, deleted_objects, surviving_objects = group_objects(
+        latest_d1g1t_export_objects, master_objects
+    )
+
+    prepare_new_master(headers, master_filepath)
+
+    # TODO: DEBUG
+    compare_object_dictionaries(master_filepath, headers, surviving_objects, latest_d1g1t_export_objects)
+    add_new_objects_to_master(master_filepath, headers, new_objects)
