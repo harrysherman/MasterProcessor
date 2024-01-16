@@ -1,7 +1,8 @@
 import PyInstaller.__main__
 import os
 import platform
-import subprocess
+
+# import subprocess
 
 # Determine the operating system
 current_os = platform.system()
@@ -27,13 +28,15 @@ icon_name = mac_icon if current_os == "Darwin" else win_icon
 icon_path = os.path.join("icons", icon_name)
 
 # Specify the path to your Bash script
-bash_script_path = os.path.join("scripts", "generate_icons.sh")
+# bash_script_path = os.path.join("scripts", "generate_icons.sh")
 # subprocess.run(["bash", bash_script_path])
 
 
 PyInstaller.__main__.run(
     [
         "app.py",
+        "--additional-hooks-dir",
+        "additional-pyinstaller-hooks",
         "--onefile",
         "--windowed",
         "--clean",
@@ -42,7 +45,7 @@ PyInstaller.__main__.run(
         "--noconfirm",
         "--distpath",
         dist_path,
-        # "--icon",
-        # icon_path,
+        "--icon",
+        icon_path,
     ]
 )

@@ -10,7 +10,7 @@ a = Analysis(
     binaries=[],
     datas=[],
     hiddenimports=[],
-    hookspath=[],
+    hookspath=['additional-pyinstaller-hooks'],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
@@ -41,4 +41,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['icons\\icon.ico'],
 )

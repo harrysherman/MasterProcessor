@@ -52,7 +52,7 @@ for size in "${sizes[@]}"; do
   ICON_FILES="$ICON_FILES $ICONSET_FOLDER/icon_${size}@2x.png"
 done
 echo Generating icon.ico
-convert $ICON_FILES icon.ico 
+convert $ICON_FILES icons/icon.ico 
 fi
 # remove generated renditions
 echo removing $ICONSET_FOLDER folder
